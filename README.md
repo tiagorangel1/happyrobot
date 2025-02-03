@@ -2,6 +2,9 @@
 
 Simple Discord AI bot using Gemini with personality/vibes support, recognizing images, and real-time streaming.
 
+You can also talk to it in DMs using slash commands.
+
+
 ***
 
 ## How to use
