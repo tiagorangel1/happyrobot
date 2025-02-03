@@ -23,14 +23,22 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
     await messageOrInteraction.deferReply();
   }
 
-  const messages = await messageOrInteraction.channel.messages.fetch({ limit: 15 });
-  const last15Messages = Array.from(messages.values())
-    .reverse()
-    .map((msg) => `${msg.author.tag}: ${msg.content}`)
-    .join("\n");
+  let last15Messages = "";
+  try {
+    if (messageOrInteraction.channel) {
+      const messages = await messageOrInteraction.channel.messages.fetch({ limit: 15 });
+      last15Messages = Array.from(messages.values())
+        .reverse()
+        .map((msg) => `${msg.author.tag}: ${msg.content}`)
+        .join("\n");
+    }
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    last15Messages = "Unable to fetch message history";
+  }
 
   const serverName = messageOrInteraction.guild ? messageOrInteraction.guild.name : "DM";
-  const channelName = messageOrInteraction.channel.name || "DM";
+  const channelName = messageOrInteraction.channel?.name || "DM";
   const userName = isInteraction ? messageOrInteraction.user.tag : messageOrInteraction.author.tag;
 
   const context = `
@@ -50,7 +58,10 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
     ? await messageOrInteraction.editReply({
         content: "-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
       })
-    : await messageOrInteraction.reply("-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...");
+    : await messageOrInteraction.reply({
+        content: "-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
+        fetchReply: true  // This ensures we get the message object back
+      });
 
   const chat = model.startChat({});
   let raw = "";
@@ -77,29 +88,57 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
   try {
     const result = await chat.sendMessageStream(parts);
+    let lastUpdateTime = Date.now();
+    let messageToEdit = await (isInteraction ? messageOrInteraction.fetchReply() : reply);
 
     for await (const chunk of result.stream) {
-      raw += chunk.text().replace(`-# AI generated. Happy Robot can make mistakes.`, '');
+      const newText = chunk.text();
+      if (!newText) continue;
+      
+      raw += newText.replace(`-# AI generated. Happy Robot can make mistakes.`, '');
       raw = raw.replace(/<think>[\s\S]*?<\/think>/g, '');
+      
       if (raw.length > 1800) {
         raw = raw.slice(0, 1800);
       }
-      await reply.edit({
-        content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
-        allowedMentions: { parse: [] },
-      });
+
+      const currentTime = Date.now();
+      if (currentTime - lastUpdateTime >= 500) {
+        try {
+          messageToEdit = await (isInteraction 
+            ? messageOrInteraction.editReply({
+                content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
+                allowedMentions: { parse: [] },
+              })
+            : messageToEdit.edit({
+                content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
+                allowedMentions: { parse: [] },
+              }));
+          lastUpdateTime = currentTime;
+        } catch (editError) {
+          console.error("Error updating message:", editError);
+        }
+      }
     }
 
-    await reply.edit({
-      content: raw.trim() + "\n-# AI generated. Happy Robot can make mistakes.",
-      allowedMentions: { parse: [] },
-    });
+    // Final update
+    await (isInteraction 
+      ? messageOrInteraction.editReply({
+          content: raw.trim() + "\n-# AI generated. Happy Robot can make mistakes.",
+          allowedMentions: { parse: [] },
+        })
+      : messageToEdit.edit({
+          content: raw.trim() + "\n-# AI generated. Happy Robot can make mistakes.",
+          allowedMentions: { parse: [] },
+        }));
+
   } catch (error) {
-    console.error(error);
-    await reply.edit({
-      content: "❌ **Something went wrong. Please try again later**",
-      allowedMentions: { parse: [] },
-    });
+    console.error("Error in message processing:", error);
+    const errorMessage = "❌ **Something went wrong. Please try again later**\n-# Error: " + error.message;
+    
+    await (isInteraction 
+      ? messageOrInteraction.editReply({ content: errorMessage, allowedMentions: { parse: [] } })
+      : messageToEdit.edit({ content: errorMessage, allowedMentions: { parse: [] } }));
   }
 }
 
@@ -109,6 +148,7 @@ client.once("ready", async () => {
   const chatCommand = new SlashCommandBuilder()
     .setName('chat')
     .setDescription('Chat with Happy Robot')
+    .setContexts(0, 1, 2)
     .addStringOption(option =>
       option
         .setName('message')
