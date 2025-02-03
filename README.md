@@ -1,4 +1,4 @@
-# happy robot
+# Happy Robot
 
 Simple Discord AI bot using Gemini with personality/vibes support, recognizing images, and real-time streaming.
 
