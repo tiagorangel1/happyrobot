@@ -63,12 +63,14 @@ client.on("messageCreate", async (message) => {
     if (message.content.includes("--vibe")) {
       const newVibe = message.content.split(" --vibe ")[1]?.toLowerCase().trim();
 
-      if (vibes[newVibe]) {
+      console.log("vibe", newVibe, vibes[newVibe])
+
+      if (newVibe && vibes[newVibe]) {
         model = genAI.getGenerativeModel({
-          model: vibes[newVibe].model,
-          systemInstruction: vibes[newVibe].prompt + "\n\n" + context,
+          model: vibes[newVibe]?.model,
+          systemInstruction: vibes[newVibe]?.prompt + "\n\n" + context,
         });
-      } else {
+      } else if (newVibe) {
         await message.reply(`❌ **Vibe "${newVibe}" not found**\n-# Available vibes: ${Object.keys(vibes).join(", ")}`, {
           allowedMentions: { parse: [] },
         })
@@ -78,9 +80,7 @@ client.on("messageCreate", async (message) => {
 
     const reply = await message.reply("-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...");
 
-    const chat = model.startChat({
-      history: [],
-    });
+    const chat = model.startChat({});
 
     let raw = "";
     const query = message.content.replaceAll(`<@${client.user.id}>`, "");
