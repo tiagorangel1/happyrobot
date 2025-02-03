@@ -10,14 +10,14 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages
   ],
-  ws: { properties: { browser: 'Discord iOS' } },
+  ws: { properties: { $browser: "Discord iOS" }}
 });
 
 const openai = new OpenAI({
   apiKey: process.env['OPENAI_API_KEY'],
 });
 
-const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&permissions=274877974528&scope=bot`;
+const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}`;
 
 async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const isInteraction = messageOrInteraction.isChatInputCommand?.();
@@ -148,6 +148,16 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}!\nInvite link: ${inviteLink}`);
+
+  client.user.setPresence({
+    status: 'online',
+    activity: {
+        name: 'Listening to pings',
+        type: 'PLAYING',
+        url: 'https://github.com/tiagorangel1/happyrobot'
+    },
+    mobile: true
+  });
 
   const chatCommand = new SlashCommandBuilder()
     .setName('chat')
