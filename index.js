@@ -106,7 +106,6 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}!\nInvite link: ${inviteLink}`);
   
-  // Register the chat command
   const chatCommand = new SlashCommandBuilder()
     .setName('chat')
     .setDescription('Chat with Happy Robot')
