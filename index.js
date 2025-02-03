@@ -152,7 +152,6 @@ client.once("ready", async () => {
   const chatCommand = new SlashCommandBuilder()
     .setName('chat')
     .setDescription('Chat with Happy Robot')
-    // .setContexts(0, 1, 2)
     .addStringOption(option =>
       option
         .setName('message')
