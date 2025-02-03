@@ -13,8 +13,8 @@
   "license": "AGPL-3.0-only",
   "description": "",
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
-    "discord.js": "^14.17.3"
+    "discord.js": "^14.17.3",
+    "openai": "^4.82.0"
   },
   "devDependencies": {
     "@types/bun": "latest"

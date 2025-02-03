@@ -1,5 +1,6 @@
+const OpenAI = require('openai');
+
 const { Client, GatewayIntentBits, SlashCommandBuilder } = require("discord.js");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const vibes = require("./config/vibes.js").default;
 
 const client = new Client({
@@ -9,18 +10,20 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages
   ],
+  ws: { properties: { browser: 'Discord iOS' } },
 });
 
-const apiKey = process.env.GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(apiKey);
+const openai = new OpenAI({
+  apiKey: process.env['OPENAI_API_KEY'],
+});
 
 const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&permissions=274877974528&scope=bot`;
 
 async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const isInteraction = messageOrInteraction.isChatInputCommand?.();
-  
+
   if (isInteraction) {
-    await messageOrInteraction.deferReply({ ephemeral: false });
+    await messageOrInteraction.deferReply();
   }
 
   let last15Messages = "";
@@ -41,61 +44,67 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const channelName = messageOrInteraction.channel?.name || "DM";
   const userName = isInteraction ? messageOrInteraction.user.tag : messageOrInteraction.author.tag;
 
-  const context = `
-    Server Name: ${serverName}
-    Channel Name: ${channelName}
-    User Name: ${userName}
-    Last 15 Messages:
-    ${last15Messages}
-  `;
+  const systemMessage = selectedVibe ? vibes[selectedVibe].prompt : vibes.normal.prompt;
 
-  let model = genAI.getGenerativeModel({
-    model: selectedVibe ? vibes[selectedVibe].model : vibes.normal.model,
-    systemInstruction: (selectedVibe ? vibes[selectedVibe].prompt : vibes.normal.prompt) + "\n\n" + context,
-  });
-
-  const reply = isInteraction 
+  const reply = isInteraction
     ? await messageOrInteraction.editReply({
-        content: "<a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
-      })
+      content: "<a:TypingEmoji:1335674049736736889> Thinking...",
+    })
     : await messageOrInteraction.reply({
-        content: "<a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
-        fetchReply: true
-      });
+      content: "<a:TypingEmoji:1335674049736736889> Thinking...",
+      fetchReply: true
+    });
 
-  const chat = model.startChat({});
   let raw = "";
-  const parts = [];
+  const messages = [
+    {
+      role: "system",
+      content: `${systemMessage}\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`
+    },
+    { role: "user", content }
+  ];
 
   if (messageOrInteraction.attachments?.size > 0) {
+    const imageContents = [];
     for (const [_, attachment] of messageOrInteraction.attachments) {
       try {
         const imageResponse = await fetch(attachment.url);
         const imageBuffer = await imageResponse.arrayBuffer();
-        parts.push({
-          inlineData: {
-            data: Buffer.from(imageBuffer).toString("base64"),
-            mimeType: attachment.contentType || "image/jpeg",
-          },
+        imageContents.push({
+          type: "image_url",
+          image_url: {
+            url: `data:${attachment.contentType};base64,${Buffer.from(imageBuffer).toString('base64')}`
+          }
         });
-      } catch {}
+      } catch (error) {
+        console.error("Error processing image:", error);
+      }
+    }
+    if (imageContents.length > 0) {
+      messages[1].content = [
+        ...imageContents,
+        { type: "text", text: content }
+      ];
     }
   }
 
-  parts.push(content);
-
   try {
-    const result = await chat.sendMessageStream(parts);
+    const stream = await openai.chat.completions.create({
+      model: selectedVibe ? vibes[selectedVibe].model : vibes.normal.model,
+      messages,
+      stream: true,
+    });
+
     let lastUpdateTime = Date.now();
     let messageToEdit = await (isInteraction ? messageOrInteraction.fetchReply() : reply);
 
-    for await (const chunk of result.stream) {
-      const newText = chunk.text();
+    for await (const chunk of stream) {
+      const newText = chunk.choices[0]?.delta?.content || '';
       if (!newText) continue;
-      
-      raw += newText.replace(`-# AI generated. Happy Robot can make mistakes.`, '');
+
+      raw += newText;
       raw = raw.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
-      
+
       if (raw.length > 1800) {
         raw = raw.slice(0, 1800);
       }
@@ -103,35 +112,35 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       const currentTime = Date.now();
       if (currentTime - lastUpdateTime >= 500) {
         try {
-          messageToEdit = await (isInteraction 
+          messageToEdit = await (isInteraction
             ? messageOrInteraction.editReply({
-                content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Thinking...",
-                allowedMentions: { parse: [] },
-              })
+              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Thinking...",
+              allowedMentions: { parse: [] },
+            })
             : messageToEdit.edit({
-                content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Thinking...",
-                allowedMentions: { parse: [] },
-              }));
+              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Thinking...",
+              allowedMentions: { parse: [] },
+            }));
           lastUpdateTime = currentTime;
-        } catch {}
+        } catch { }
       }
     }
 
-    await (isInteraction 
+    await (isInteraction
       ? messageOrInteraction.editReply({
-          content: raw.trim() + "\n-# AI generated. Happy Robot can make mistakes.",
-          allowedMentions: { parse: [] },
-        })
+        content: raw.trim() + "\n-# AI generated. Happy Robot can make mistakes.",
+        allowedMentions: { parse: [] },
+      })
       : messageToEdit.edit({
-          content: raw.trim() + "\n-# AI generated. Happy Robot can make mistakes.",
-          allowedMentions: { parse: [] },
-        }));
+        content: raw.trim() + "\n-# AI generated. Happy Robot can make mistakes.",
+        allowedMentions: { parse: [] },
+      }));
 
   } catch (error) {
     console.error("Error in message processing:", error);
     const errorMessage = "❌ **Something went wrong. Please try again later**\n-# Error: " + error.message;
-    
-    await (isInteraction 
+
+    await (isInteraction
       ? messageOrInteraction.editReply({ content: errorMessage, allowedMentions: { parse: [] } })
       : messageToEdit.edit({ content: errorMessage, allowedMentions: { parse: [] } }));
   }
@@ -139,11 +148,11 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}!\nInvite link: ${inviteLink}`);
-  
+
   const chatCommand = new SlashCommandBuilder()
     .setName('chat')
     .setDescription('Chat with Happy Robot')
-    .setContexts(0, 1, 2)
+    // .setContexts(0, 1, 2)
     .addStringOption(option =>
       option
         .setName('message')
@@ -166,7 +175,7 @@ client.on('interactionCreate', async interaction => {
   if (interaction.commandName === 'chat') {
     const message = interaction.options.getString('message');
     const vibe = interaction.options.getString('vibe');
-    
+
     await processChat(interaction, message, vibe);
   }
 });
@@ -181,7 +190,7 @@ client.on("messageCreate", async (message) => {
 
   if (message.content.includes("--vibe")) {
     const newVibe = message.content.split(" --vibe ")[1]?.toLowerCase().trim();
-    
+
     if (newVibe && vibes[newVibe]) {
       selectedVibe = newVibe;
     } else if (newVibe) {
