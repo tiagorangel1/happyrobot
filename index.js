@@ -33,7 +33,6 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
         .join("\n");
     }
   } catch (error) {
-    console.error("Error fetching messages:", error);
     last15Messages = "Unable to fetch message history";
   }
 
@@ -60,7 +59,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       })
     : await messageOrInteraction.reply({
         content: "-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
-        fetchReply: true  // This ensures we get the message object back
+        fetchReply: true
       });
 
   const chat = model.startChat({});
@@ -78,9 +77,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
             mimeType: attachment.contentType || "image/jpeg",
           },
         });
-      } catch (error) {
-        console.error("Error processing image:", error);
-      }
+      } catch {}
     }
   }
 
@@ -115,13 +112,10 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
                 allowedMentions: { parse: [] },
               }));
           lastUpdateTime = currentTime;
-        } catch (editError) {
-          console.error("Error updating message:", editError);
-        }
+        } catch {}
       }
     }
 
-    // Final update
     await (isInteraction 
       ? messageOrInteraction.editReply({
           content: raw.trim() + "\n-# AI generated. Happy Robot can make mistakes.",
