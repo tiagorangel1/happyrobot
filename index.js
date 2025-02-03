@@ -20,10 +20,11 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const isInteraction = messageOrInteraction.isChatInputCommand?.();
   
   if (isInteraction) {
-    await messageOrInteraction.deferReply();
+    await messageOrInteraction.deferReply({ ephemeral: false });
   }
 
   let last15Messages = "";
+
   try {
     if (messageOrInteraction.channel) {
       const messages = await messageOrInteraction.channel.messages.fetch({ limit: 15 });
@@ -55,10 +56,10 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
   const reply = isInteraction 
     ? await messageOrInteraction.editReply({
-        content: "-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
+        content: "<a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
       })
     : await messageOrInteraction.reply({
-        content: "-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
+        content: "<a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
         fetchReply: true
       });
 
@@ -93,7 +94,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       if (!newText) continue;
       
       raw += newText.replace(`-# AI generated. Happy Robot can make mistakes.`, '');
-      raw = raw.replace(/<think>[\s\S]*?<\/think>/g, '');
+      raw = raw.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
       
       if (raw.length > 1800) {
         raw = raw.slice(0, 1800);
@@ -104,11 +105,11 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
         try {
           messageToEdit = await (isInteraction 
             ? messageOrInteraction.editReply({
-                content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
+                content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Thinking...",
                 allowedMentions: { parse: [] },
               })
             : messageToEdit.edit({
-                content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Happy Robot is thinking...",
+                content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Thinking...",
                 allowedMentions: { parse: [] },
               }));
           lastUpdateTime = currentTime;
