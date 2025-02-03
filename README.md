@@ -4,16 +4,20 @@ Simple Discord AI bot using Gemini with personality/vibes support, recognizing i
 
 ***
 
-To install dependencies:
+## How to use
+
+First, install Bun (<https://bun.sh>) and clone this repo using git. Then, install dependencies:
 
 ```bash
 bun install
 ```
 
-To run:
+Set up the env by renaming `.env.example` to `.env` and filling in your Discord & Google AI credentials, and run Happy Robot:
 
 ```bash
-bun run index.js
+bun run start
 ```
 
-This project was created using `bun init` in bun v1.2.0. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+***
+
+This project was created using `bun init` in bun v1.2.2. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
