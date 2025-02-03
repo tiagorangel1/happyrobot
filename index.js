@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const vibes = require("./config/vibes.js");
+const vibes = require("./config/vibes.js").default;
 
 const client = new Client({
   intents: [
