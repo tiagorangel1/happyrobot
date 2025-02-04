@@ -1,4 +1,9 @@
+<div align="center">
+<img src="./assets/logo.svg" alt="Happy Robot logo" width="100" />
+
 # Happy Robot
+
+</div>
 
 Simple Discord AI bot using ChatGPT/OpenAI with personality/vibes support, recognizing images, generating images, and real-time streaming.
 
