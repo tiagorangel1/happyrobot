@@ -1,7 +1,7 @@
 {
   "uid": "happy_robot",
   "append": true,
-  "script": "index.js",
+  "script": "./src/index.js",
   "command": "bun",
   "sourceDir": "/home/pi/Desktop/happy_robot",
   "logFile": "/home/pi/Desktop/happy_robot/logs/forever.log",

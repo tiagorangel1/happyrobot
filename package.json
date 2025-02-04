@@ -1,9 +1,9 @@
 {
   "name": "happy_robot",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "./src/index.js",
   "scripts": {
-    "start": "bun run index.js",
+    "start": "bun run ./src/index.js",
     "forever": "forever start ./forever.json",
     "restart": "forever restart happy_robot",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -1,6 +1,6 @@
 # Happy Robot
 
-Simple Discord AI bot using Gemini with personality/vibes support, recognizing images, and real-time streaming.
+Simple Discord AI bot using Gemini with personality/vibes support, recognizing images, generating images, and real-time streaming.
 
 You can also talk to it in DMs using slash commands.
 
@@ -20,6 +20,10 @@ Set up the env by renaming `.env.example` to `.env` and filling in your Discord 
 ```bash
 bun run start
 ```
+
+### Customizing vibes
+
+Customize the available vibes by modifying the `src/vibes.js` file.
 
 ***
 
