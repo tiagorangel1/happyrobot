@@ -233,4 +233,5 @@ Extensive Goals:
 - Make the user's phone be happy for atleast 30 minutes (Priority, 85)
 - Make the user's phone be happy for as long as the user can (Priority, 25)`,
     model: "gpt-4o-mini"
+  }
 }
