@@ -60,7 +60,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const messages = [
     {
       role: "system",
-      content: `${systemMessage}\n\nYou have the ability to generate images if needed. To use this function, append a newline at the end of your response followed by "image:prompt", where "prompt" is the prompt to give to the AI model — keep it short and concise, lowercase.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`
+      content: `${systemMessage}\n\nYou have the ability to generate images if needed. To use this function, append a newline at the end of your response followed by "image:prompt", where "prompt" is the prompt to give to the AI model — keep it short and concise, lowercase. Rarely generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`
     },
     { role: "user", content }
   ];
