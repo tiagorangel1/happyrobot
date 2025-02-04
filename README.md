@@ -1,6 +1,6 @@
 # Happy Robot
 
-Simple Discord AI bot using Gemini with personality/vibes support, recognizing images, generating images, and real-time streaming.
+Simple Discord AI bot using ChatGPT/OpenAI with personality/vibes support, recognizing images, generating images, and real-time streaming.
 
 You can also talk to it in DMs using slash commands.
 
@@ -15,7 +15,7 @@ First, install Bun (<https://bun.sh>) and clone this repo using git. Then, insta
 bun install
 ```
 
-Set up the env by renaming `.env.example` to `.env` and filling in your Discord & Google AI credentials, and run Happy Robot:
+Set up the env by renaming `.env.example` to `.env` and filling in your Discord & OpenAI credentials, and run Happy Robot:
 
 ```bash
 bun run start
