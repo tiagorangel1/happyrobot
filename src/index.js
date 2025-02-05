@@ -1,6 +1,6 @@
 const OpenAI = require('openai');
 
-const { Client, GatewayIntentBits, SlashCommandBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, SlashCommandBuilder, Partials } = require("discord.js");
 const vibes = require("./vibes.js").default;
 const genImage = require("./images.js").default;
 
@@ -12,6 +12,10 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.DirectMessageTyping,
     GatewayIntentBits.DirectMessageReactions
+  ],
+  partials: [
+    Partials.Channel,
+    Partials.Message
   ]
 });
 
@@ -62,7 +66,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const messages = [
     {
       role: "system",
-      content: `${systemMessage}\n\nYou have the ability to generate images if needed. To use this function, append a newline at the end of your response followed by "image:prompt", where "prompt" is the prompt to give to the AI model — keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`
+      content: `${systemMessage}\n\n**YOU NOW HAVE THE ABILITY TO GENERATE/DRAW/CREATE IMAGES.** To use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`
     },
     { role: "user", content }
   ];
@@ -211,7 +215,32 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.on("messageCreate", async (message) => {
-  if (!message.content || !message.mentions.has(client.user) || message.author.bot) {
+  if (message.author.bot) return;
+
+  if (message.channel.type === 1 && message.channel.isDMBased()) {
+    console.log("dm!!", message.content)
+    let selectedVibe = null;
+    let content = message.content;
+
+    if (message.content.includes("--vibe")) {
+      const newVibe = message.content.split(" --vibe ")[1]?.toLowerCase().trim();
+
+      if (newVibe && vibes[newVibe]) {
+        selectedVibe = newVibe;
+        content = message.content.split(" --vibe ")[0].trim();
+      } else if (newVibe) {
+        await message.reply(`❌ **Vibe "${newVibe}" not found**\n-# Available vibes: ${Object.keys(vibes).join(", ")}`, {
+          allowedMentions: { parse: [] },
+        });
+        return;
+      }
+    }
+
+    await processChat(message, content, selectedVibe);
+    return;
+  }
+
+  if (!message.content || !message.mentions.has(client.user)) {
     return;
   }
 
