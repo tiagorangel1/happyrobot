@@ -50,10 +50,10 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
   const reply = isInteraction
     ? await messageOrInteraction.editReply({
-      content: "<a:TypingEmoji:1335674049736736889> Thinking...",
+      content: "<a:TypingEmoji:1335674049736736889> Typing...",
     })
     : await messageOrInteraction.reply({
-      content: "<a:TypingEmoji:1335674049736736889> Thinking...",
+      content: "<a:TypingEmoji:1335674049736736889> Typing...",
       fetchReply: true
     });
 
@@ -117,11 +117,11 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
         try {
           messageToEdit = await (isInteraction
             ? messageOrInteraction.editReply({
-              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Just a second...",
+              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Typing...",
               allowedMentions: { parse: [] },
             })
             : messageToEdit.edit({
-              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Just a second...",
+              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Typing...",
               allowedMentions: { parse: [] },
             }));
           lastUpdateTime = currentTime;
