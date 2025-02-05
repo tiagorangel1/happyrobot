@@ -96,7 +96,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   }
 
   try {
-    const stream = await openai.chat.completions({
+    const stream = await openai.chat.completions.create({
       model: selectedVibe ? vibes[selectedVibe].model : vibes.normal.model,
       messages,
       stream: true
