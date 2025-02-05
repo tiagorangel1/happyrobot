@@ -96,10 +96,10 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   }
 
   try {
-    const stream = await openai.chat.completions.create({
+    const stream = await openai.beta.chat.completions({
       model: selectedVibe ? vibes[selectedVibe].model : vibes.normal.model,
       messages,
-      stream: true,
+      stream: true
     });
 
     let lastUpdateTime = Date.now();
@@ -109,15 +109,17 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       const newText = chunk.choices[0]?.delta?.content || '';
       if (!newText) continue;
 
-      raw += newText;
-      raw = raw.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
 
-      if (raw.length > 1800) {
-        raw = raw.slice(0, 1800);
+
+      raw += newText;
+
+      if (raw.length > 1900) {
+        raw = raw.slice(0, 1900);
       }
 
+      // Debounce edits to 200ms
       const currentTime = Date.now();
-      if (currentTime - lastUpdateTime >= 500) {
+      if (currentTime - lastUpdateTime >= 200) {
         try {
           messageToEdit = await (isInteraction
             ? messageOrInteraction.editReply({
