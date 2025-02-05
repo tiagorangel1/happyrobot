@@ -9,7 +9,9 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessageTyping,
+    GatewayIntentBits.DirectMessageReactions
   ]
 });
 
@@ -60,7 +62,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const messages = [
     {
       role: "system",
-      content: `${systemMessage}\n\nYou have the ability to generate images if needed. To use this function, append a newline at the end of your response followed by "image:prompt", where "prompt" is the prompt to give to the AI model — keep it short and concise, lowercase. Rarely generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`
+      content: `${systemMessage}\n\nYou have the ability to generate images if needed. To use this function, append a newline at the end of your response followed by "image:prompt", where "prompt" is the prompt to give to the AI model — keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`
     },
     { role: "user", content }
   ];
@@ -115,11 +117,11 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
         try {
           messageToEdit = await (isInteraction
             ? messageOrInteraction.editReply({
-              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Thinking...",
+              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Just a second...",
               allowedMentions: { parse: [] },
             })
             : messageToEdit.edit({
-              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Thinking...",
+              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Just a second...",
               allowedMentions: { parse: [] },
             }));
           lastUpdateTime = currentTime;
@@ -133,13 +135,22 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
     const resp = raw.split("\n").filter((line) => {
       return !line.startsWith("image:")
-    }).join("\n").trim() + `\n-# AI generated. Happy Robot can make mistakes. ${imagePrompt ? "Image AI generated" : ""}`;
+    }).join("\n").trim() + `\n-# AI generated. Check important details.`;
 
-    const body = {
-      content: resp,
-      files: imagePrompt ? [(await genImage(imagePrompt))] : [],
-      allowedMentions: { parse: [] },
-    };
+    let body;
+    try {
+      body = {
+        content: resp,
+        files: imagePrompt ? [(await genImage(imagePrompt))] : [],
+        allowedMentions: { parse: [] },
+      };
+    } catch (error) {
+      const errorMessage = "❌ **Something went wrong while generating an image. Please try again later**\n-# Error: " + error.message;
+      await (isInteraction
+        ? messageOrInteraction.editReply({ content: errorMessage, allowedMentions: { parse: [] } })
+        : messageToEdit.edit({ content: errorMessage, allowedMentions: { parse: [] } }));
+      return;
+    }
 
     await (isInteraction
       ? messageOrInteraction.editReply(body)
@@ -182,7 +193,8 @@ client.once("ready", async () => {
         .setDescription('Set a specific vibe for the response')
         .addChoices(
           ...Object.keys(vibes).map(vibe => ({ name: vibe, value: vibe }))
-        ));
+        ))
+    .setContexts(0, 1, 2);
 
   await client.application.commands.set([chatCommand]);
 });
