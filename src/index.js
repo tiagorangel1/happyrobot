@@ -96,7 +96,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   }
 
   try {
-    const stream = await openai.beta.chat.completions({
+    const stream = await openai.chat.completions({
       model: selectedVibe ? vibes[selectedVibe].model : vibes.normal.model,
       messages,
       stream: true
@@ -164,7 +164,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
   } catch (error) {
     console.error("Error in message processing:", error);
-    const errorMessage = "❌ **Something went wrong. Please try again later**\n-# Error: " + error.message;
+    const errorMessage = "❌ **Something went wrong. Please try again later**\n```" + error.message + "\n```";
 
     await (isInteraction
       ? messageOrInteraction.editReply({ content: errorMessage, allowedMentions: { parse: [] } })
