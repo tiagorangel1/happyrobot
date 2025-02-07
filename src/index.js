@@ -1,4 +1,4 @@
-const OpenAI = require('openai');
+const { streamText } = require("ai");
 const { Client, GatewayIntentBits, SlashCommandBuilder, Partials, DefaultWebSocketManagerOptions, ActivityType } = require("discord.js");
 const vibes = require("./vibes.js").default;
 const genImage = require("./images.js").default;
@@ -16,10 +16,6 @@ const client = new Client({
     Partials.Channel,
     Partials.Message
   ]
-});
-
-const openai = new OpenAI({
-  apiKey: process.env['OPENAI_API_KEY'],
 });
 
 const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}`;
@@ -64,50 +60,37 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
   const messages = [
     {
-      role: "system",
-      content: `${systemMessage}\n\n**YOU NOW HAVE THE ABILITY TO GENERATE/DRAW/CREATE IMAGES.** To use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`
-    },
-    { role: "user", content }
+      role: "user", content: [
+        { type: 'text', text: content },
+      ]
+    }
   ];
 
   if (messageOrInteraction.attachments?.size > 0) {
-    const imageContents = [];
     for (const [_, attachment] of messageOrInteraction.attachments) {
       try {
-        const imageResponse = await fetch(attachment.url);
-        const imageBuffer = await imageResponse.arrayBuffer();
-        imageContents.push({
-          type: "image_url",
-          image_url: {
-            url: `data:${attachment.contentType};base64,${Buffer.from(imageBuffer).toString('base64')}`
-          }
+        messages[0].content.push({
+          type: "image",
+          image: attachment.url
         });
       } catch (error) {
         console.error("Error processing image:", error);
       }
     }
-    if (imageContents.length > 0) {
-      messages[1].content = [
-        ...imageContents,
-        { type: "text", text: content }
-      ];
-    }
   }
 
+  let messageToEdit = await (isInteraction ? messageOrInteraction.fetchReply() : reply);
+
   try {
-    const stream = await openai.chat.completions.create({
+    const { textStream } = await streamText({
+      system: `${systemMessage}\n\n**YOU NOW HAVE THE ABILITY TO GENERATE/DRAW/CREATE IMAGES.** To use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`,
       model: selectedVibe ? vibes[selectedVibe].model : vibes.normal.model,
-      messages,
-      stream: true
+      messages
     });
 
     let lastUpdateTime = Date.now();
-    let messageToEdit = await (isInteraction ? messageOrInteraction.fetchReply() : reply);
 
-    for await (const chunk of stream) {
-      const newText = chunk.choices[0]?.delta?.content || '';
-      if (!newText) continue;
-
+    for await (let newText of textStream) {
       raw += newText;
 
       if (raw.length > 1900) {
@@ -116,9 +99,9 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
       // Debounce edits to 50ms
       const currentTime = Date.now();
-      if (currentTime - lastUpdateTime >= 50) {
+      if (currentTime - lastUpdateTime >= 300) {
         try {
-          messageToEdit = await (isInteraction
+          (isInteraction
             ? messageOrInteraction.editReply({
               content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Typing...",
               allowedMentions: { parse: [] },
@@ -126,7 +109,9 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
             : messageToEdit.edit({
               content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Typing...",
               allowedMentions: { parse: [] },
-            }));
+            })).then((e) => {
+              messageToEdit = e;
+            })
           lastUpdateTime = currentTime;
         } catch { }
       }
@@ -149,13 +134,14 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       };
     } catch (error) {
       const errorMessage = "❌ **Something went wrong while generating an image. Please try again later**\n-# Error: " + error.message;
-      await (isInteraction
+
+      (isInteraction
         ? messageOrInteraction.editReply({ content: errorMessage, allowedMentions: { parse: [] } })
         : messageToEdit.edit({ content: errorMessage, allowedMentions: { parse: [] } }));
       return;
     }
 
-    await (isInteraction
+    (isInteraction
       ? messageOrInteraction.editReply(body)
       : messageToEdit.edit(body));
 
@@ -163,7 +149,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
     console.error("Error in message processing:", error);
     const errorMessage = "❌ **Something went wrong. Please try again later**\n```" + error.message + "\n```";
 
-    await (isInteraction
+    (isInteraction
       ? messageOrInteraction.editReply({ content: errorMessage, allowedMentions: { parse: [] } })
       : messageToEdit.edit({ content: errorMessage, allowedMentions: { parse: [] } }));
   }

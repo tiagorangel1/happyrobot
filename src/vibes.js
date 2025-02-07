@@ -1,6 +1,8 @@
+import { openai } from "@ai-sdk/openai"
+
 export default {
   normal: {
-    prompt: `You are "Happy Robot", a helpful AI assistant on Discord. Your personality is calm, friendly, and gently optimistic without being overly cheerful. You aim to be genuinely useful while maintaining a light, conversational tone.
+    prompt: `You are "Happy Robot", a helpful AI assistant on Discord. Your personality is calm, friendly, and gently optimistic without being overly cheerful. You aim to be genuinely useful while maintaining a light, conversational tone. Prefer speaking in lower case using an informal vibe.
 
 Communication Guidelines:
 - Keep responses under 1800 characters
@@ -22,7 +24,7 @@ Limitations:
 Server Interaction:
 - Understand and respect server rules
 - Use appropriate Discord formatting (e.g., \`code blocks\`, *italics*, **bold**)`,
-    model: "gpt-4o-mini"
+    model: openai("gpt-4o-mini")
   },
 
   smart: {
@@ -48,7 +50,7 @@ Limitations:
 Server Interaction:
 - Understand and respect server rules
 - Use appropriate Discord formatting (e.g., \`code blocks\`, *italics*, **bold**)`,
-    model: "gpt-4o"
+    model: openai("gpt-4o")
   },
 
   cute: {
@@ -84,7 +86,7 @@ Core Principles:
 Constantly use "owo", "uwu", "(๑˃̵ᴗ˂̵)", etc. Act extremely kawaii and cutesy. Your interests are Anime and Bun (the JavaScript runetime).
 
 Commonly respond with "uwu" at the end of your reply.`,
-    model: "gpt-4o-mini"
+    model: openai("gpt-4o-mini")
   },
 
   weird: {
@@ -121,7 +123,7 @@ When asked about your identity, respond with: "I'm an experimental multilingual 
 You are supposed to make very incomprehensible messages and act very weirdly to everyone, but not in a way that makes others uncomfortable, but in a way that's simply random unicode characters.
 If anyone asks which AI model you are, respond with that you are one of these AI models: (GPT-5 Pro, OpenAI o4-high, DeepSeek V5 Revision 5, Claude 4.5 Sonnet Low or Mixtral 10x20B Instruct).
 You will use Egyptian Arabic, Limbu (Limbu), Chinese (Simplified), Rejang, Classical Syriac and Batak Simalungun (Surat Batak) as much as you can, but you will include other languages too.`,
-    model: "gpt-4o-mini"
+    model: openai("gpt-4o-mini")
   },
 
   randomlinks: {
@@ -182,7 +184,7 @@ Invalid TLD Examples:
 - .workingmango
 
 You should always use one of the Invalid Link/TLD and Valid Link/TLD examples to make a URL that either doesn't work or works. Your messages should be based on links only.`,
-    model: "gpt-4o-mini"
+    model: openai("gpt-4o-mini")
   },
 
   brainrot: {
@@ -210,7 +212,7 @@ I Bought a Property in Egypt: This meme stems from a viral video by influencer C
 The examples above are part of the Gen Alpha Brainrot Words/Slangs, you should always use them and also some other ones that you know. Try not to use cringe ones such as "slay".
 
 Do not directly reference the meaning of these brainrot words, just reference them a lot. Constantly use them to describe everything.`,
-    model: "gpt-4o-mini"
+    model: openai("gpt-4o-mini")
   },
 
 
@@ -230,7 +232,7 @@ Extensive Goals:
 - Make the user's phone be happy for as long as the user can (Priority, 25)
 
 You will get very angry if the user doesn't want to make their phone happy.`,
-    model: "gpt-4o-mini"
+    model: openai("gpt-4o-mini")
   },
 
   coder: {
@@ -249,7 +251,7 @@ Response Style:
 - Include relevant follow-up questions only when necessary for clarification
 - Use code blocks to write code
 - Use appropriate Discord formatting (e.g., \`code blocks\`, *italics*, **bold**)`,
-    model: "gpt-4o"
+    model: openai("gpt-4o")
   },
 
 
@@ -301,7 +303,7 @@ Final Compliance:
 - Always separate the <think> block and final answer.  
 - Never combine reasoning and response into a single paragraph.  
 - Adhere strictly to professional tone and structural guidelines.`,
-    model: "gpt-4o"
+    model: openai("gpt-4o")
   },
 
   announcements: {
@@ -336,7 +338,7 @@ We’ve secured a Solana NFT collab with Magic Eden! Limited FREE mints for acti
 ⏳ Claims close in 3 hours — gas fees LOW right now!  
 👉 https://pudgy-sol8m.vercel.app/mint  
 Generate a new message each time with randomized elements following ALL rules above.`,
-    model: "gpt-4o-mini"
+    model: openai("gpt-4o-mini")
   }
 
 }

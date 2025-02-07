@@ -13,8 +13,9 @@
   "license": "AGPL-3.0-only",
   "description": "",
   "dependencies": {
-    "discord.js": "^14.17.3",
-    "openai": "^4.82.0"
+    "@ai-sdk/openai": "^1.1.9",
+    "ai": "^4.1.25",
+    "discord.js": "^14.17.3"
   },
   "devDependencies": {
     "@types/bun": "latest"
