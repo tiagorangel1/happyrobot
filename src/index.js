@@ -114,9 +114,9 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
         raw = raw.slice(0, 1900);
       }
 
-      // Debounce edits to 200ms
+      // Debounce edits to 50ms
       const currentTime = Date.now();
-      if (currentTime - lastUpdateTime >= 200) {
+      if (currentTime - lastUpdateTime >= 50) {
         try {
           messageToEdit = await (isInteraction
             ? messageOrInteraction.editReply({
