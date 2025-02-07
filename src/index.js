@@ -114,7 +114,6 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
         raw = raw.slice(0, 1900);
       }
 
-      // Debounce edits to 50ms
       const currentTime = Date.now();
       if (currentTime - lastUpdateTime >= 300) {
         try {
@@ -199,6 +198,10 @@ client.once("ready", async () => {
         .addChoices(
           ...Object.keys(vibes).map(vibe => ({ name: vibe, value: vibe }))
         ))
+    .addAttachmentOption(option =>
+      option
+        .setName('image')
+        .setDescription('An image to analyze'))
     .setContexts(0, 1, 2);
 
   await client.application.commands.set([chatCommand]);
@@ -210,6 +213,11 @@ client.on('interactionCreate', async interaction => {
   if (interaction.commandName === 'chat') {
     const message = interaction.options.getString('message');
     const vibe = interaction.options.getString('vibe');
+    const image = interaction.options.getAttachment('image');
+
+    if (image) {
+      interaction.attachments = new Map([[image.id, image]]);
+    }
 
     await processChat(interaction, message, vibe);
   }
