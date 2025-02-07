@@ -1,6 +1,5 @@
 const OpenAI = require('openai');
-
-const { Client, GatewayIntentBits, SlashCommandBuilder, Partials } = require("discord.js");
+const { Client, GatewayIntentBits, SlashCommandBuilder, Partials, DefaultWebSocketManagerOptions, ActivityType } = require("discord.js");
 const vibes = require("./vibes.js").default;
 const genImage = require("./images.js").default;
 
@@ -109,8 +108,6 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       const newText = chunk.choices[0]?.delta?.content || '';
       if (!newText) continue;
 
-
-
       raw += newText;
 
       if (raw.length > 1900) {
@@ -177,12 +174,11 @@ client.once("ready", async () => {
 
   client.user.setPresence({
     status: 'online',
-    activity: {
-      name: 'Listening to pings',
-      type: 'PLAYING',
+    activities: [{
+      name: 'my notifications',
+      type: ActivityType.Watching,
       url: 'https://github.com/tiagorangel1/happyrobot'
-    },
-    mobile: true
+    }]
   });
 
   const chatCommand = new SlashCommandBuilder()
@@ -220,7 +216,6 @@ client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
   if (message.channel.type === 1 && message.channel.isDMBased()) {
-    console.log("dm!!", message.content)
     let selectedVibe = null;
     let content = message.content;
 
@@ -264,5 +259,7 @@ client.on("messageCreate", async (message) => {
 
   await processChat(message, content, selectedVibe);
 });
+
+DefaultWebSocketManagerOptions.identifyProperties.browser = 'Discord iOS';
 
 client.login(process.env.BOT_TOKEN);
