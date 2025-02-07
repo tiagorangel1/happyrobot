@@ -25,10 +25,6 @@ const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env
 async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const isInteraction = messageOrInteraction.isChatInputCommand?.();
 
-  if (isInteraction) {
-    await messageOrInteraction.deferReply();
-  }
-
   let last15Messages = "";
 
   try {
@@ -115,7 +111,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       }
 
       const currentTime = Date.now();
-      if (currentTime - lastUpdateTime >= 300) {
+      if (currentTime - lastUpdateTime >= 100) {
         try {
           (isInteraction
             ? messageOrInteraction.editReply({
@@ -211,15 +207,30 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'chat') {
-    const message = interaction.options.getString('message');
-    const vibe = interaction.options.getString('vibe');
-    const image = interaction.options.getAttachment('image');
+    try {
+      await interaction.deferReply();
+      
+      const message = interaction.options.getString('message');
+      const vibe = interaction.options.getString('vibe');
+      const image = interaction.options.getAttachment('image');
 
-    if (image) {
-      interaction.attachments = new Map([[image.id, image]]);
+      if (image) {
+        interaction.attachments = new Map([[image.id, image]]);
+      }
+
+      await processChat(interaction, message, vibe);
+    } catch (error) {
+      console.error('Interaction error:', error);
+      try {
+        if (interaction.deferred) {
+          await interaction.editReply({ content: '❌ An error occurred. Please try again.' });
+        } else {
+          await interaction.reply({ content: '❌ An error occurred. Please try again.', ephemeral: true });
+        }
+      } catch (e) {
+        console.error('Error handling error:', e);
+      }
     }
-
-    await processChat(interaction, message, vibe);
   }
 });
 
