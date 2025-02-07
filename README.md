@@ -5,7 +5,7 @@
 
 </div>
 
-Simple Discord AI bot using ChatGPT/OpenAI with personality/vibes support, recognizing images, generating images, and real-time streaming.
+Simple Discord AI bot using ChatGPT/OpenAI with personality/vibes support, recognizing images, generating images, search, and real-time streaming.
 
 You can also talk to it in DMs using slash commands.
 

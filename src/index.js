@@ -1,4 +1,6 @@
-const { streamText } = require("ai");
+const ddg = require("duck-duck-scrape");
+const { z } = require("zod");
+const { streamText, tool } = require("ai");
 const { Client, GatewayIntentBits, SlashCommandBuilder, Partials, DefaultWebSocketManagerOptions, ActivityType } = require("discord.js");
 const vibes = require("./vibes.js").default;
 const genImage = require("./images.js").default;
@@ -85,7 +87,22 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
     const { textStream } = await streamText({
       system: `${systemMessage}\n\n**YOU NOW HAVE THE ABILITY TO GENERATE/DRAW/CREATE IMAGES.** To use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`,
       model: selectedVibe ? vibes[selectedVibe].model : vibes.normal.model,
-      messages
+      messages,
+      maxSteps: 5,
+      tools: {
+        search: tool({
+          description: 'Search something on the web',
+          parameters: z.object({
+            query: z.string().describe('The query to search for'),
+          }),
+          execute: async ({ query }) => ({
+            query,
+            results: await ddg.search(query, {
+              safeSearch: ddg.SafeSearchType.STRICT
+            })
+          }),
+        }),
+      },
     });
 
     let lastUpdateTime = Date.now();
