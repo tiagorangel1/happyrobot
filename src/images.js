@@ -40,7 +40,6 @@ export default async function (prompt) {
       "Accept-Encoding": "gzip, deflate, br, zstd",
       "Content-Length": Math.floor(Math.random() * 1000),
       "Origin": "https://deepai.org",
-      "DNT": "1",
       "Sec-GPC": "1",
       "Connection": "keep-alive",
       "Cookie": "user_sees_ads=false",

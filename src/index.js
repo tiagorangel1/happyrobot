@@ -43,8 +43,6 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
   const channelName = messageOrInteraction.channel?.name || "DM";
   const userName = isInteraction ? messageOrInteraction.user.tag : messageOrInteraction.author.tag;
 
-  const systemMessage = selectedVibe ? vibes[selectedVibe].prompt : vibes.normal.prompt;
-
   const reply = isInteraction
     ? await messageOrInteraction.editReply({
       content: "<a:TypingEmoji:1335674049736736889> Typing...",
@@ -53,8 +51,6 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       content: "<a:TypingEmoji:1335674049736736889> Typing...",
       fetchReply: true
     });
-
-  let raw = "";
 
   const messages = [
     {
@@ -81,10 +77,10 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
   try {
     const { textStream } = await streamText({
-      system: `${systemMessage}\n\n**YOU NOW HAVE THE ABILITY TO GENERATE/DRAW/CREATE IMAGES.** To use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`,
-      model: selectedVibe ? vibes[selectedVibe].model : vibes.normal.model,
+      system: `${vibes[selectedVibe || "normal"].prompt}\n\n**YOU NOW HAVE THE ABILITY TO GENERATE/DRAW/CREATE IMAGES.** To use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`,
+      model: vibes[selectedVibe || "normal"].model,
       messages,
-      maxSteps: 5,
+      maxSteps: 15,
       tools: {
         search: tool({
           description: 'Search something on the web',
@@ -98,10 +94,11 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
             })
           }),
         }),
-      },
+      }
     });
 
     let lastUpdateTime = Date.now();
+    let raw = "";
 
     for await (let newText of textStream) {
       raw += newText;
@@ -209,7 +206,7 @@ client.on('interactionCreate', async interaction => {
   if (interaction.commandName === 'chat') {
     try {
       await interaction.deferReply();
-      
+
       const message = interaction.options.getString('message');
       const vibe = interaction.options.getString('vibe');
       const image = interaction.options.getAttachment('image');
@@ -264,7 +261,7 @@ client.on("messageCreate", async (message) => {
   }
 
   const content = message.content.replaceAll(`<@${client.user.id}>`, "");
-  let selectedVibe = null;
+  let selectedVibe = "normal";
 
   if (message.content.includes("--vibe")) {
     const newVibe = message.content.split(" --vibe ")[1]?.toLowerCase().trim();
