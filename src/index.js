@@ -130,14 +130,12 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
       return line.startsWith("image:");
     })?.replace("image:", "")?.trim();
 
-    const resp = raw.split("\n").filter((line) => {
-      return !line.startsWith("image:")
-    }).join("\n").trim() + `\n-# AI generated. Check important details.`;
-
     let body;
     try {
       body = {
-        content: resp,
+        content: raw.split("\n").filter((line) => {
+          return !line.startsWith("image:")
+        }).join("\n").trim(),
         files: imagePrompt ? [(await genImage(imagePrompt))] : [],
         allowedMentions: { parse: [] },
       };
