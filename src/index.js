@@ -77,7 +77,7 @@ async function processChat(messageOrInteraction, content, selectedVibe = null) {
 
   try {
     const { textStream } = await streamText({
-      system: `${vibes[selectedVibe || "normal"].prompt}\n\n**YOU NOW HAVE THE ABILITY TO GENERATE/DRAW/CREATE IMAGES.** To use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`,
+      system: `${vibes[selectedVibe || "normal"].prompt}\n\nIMPORTANT: **YOU NOW HAVE THE ABILITY TO GENERATE IMAGES.**\nTo use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`,
       model: vibes[selectedVibe || "normal"].model,
       messages,
       maxSteps: 15,
