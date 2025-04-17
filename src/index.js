@@ -1,9 +1,21 @@
 const ddg = require("duck-duck-scrape");
 const { z } = require("zod");
 const { streamText, tool } = require("ai");
-const { Client, GatewayIntentBits, SlashCommandBuilder, Partials, DefaultWebSocketManagerOptions, ActivityType } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  SlashCommandBuilder,
+  Partials,
+  DefaultWebSocketManagerOptions,
+  ActivityType,
+} = require("discord.js");
 const vibes = require("./vibes.js").default;
 const genImage = require("./images.js").default;
+
+if (!process.env.BOT_TOKEN || !process.env.CLIENT_ID) {
+  console.error("Missing BOT_TOKEN or CLIENT_ID environment variable");
+  process.exit(1);
+}
 
 const client = new Client({
   intents: [
@@ -11,272 +23,337 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.DirectMessageTyping,
-    GatewayIntentBits.DirectMessageReactions
   ],
-  partials: [
-    Partials.Channel,
-    Partials.Message
-  ]
+  partials: [Partials.Channel, Partials.Message],
 });
 
-const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}`;
+const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&scope=bot+applications.commands&permissions=277025458240`;
 
-async function processChat(messageOrInteraction, content, selectedVibe = null) {
-  const isInteraction = messageOrInteraction.isChatInputCommand?.();
+const EDIT_INTERVAL_MS = 100;
+const MESSAGE_HISTORY_LIMIT = 10;
+const MAX_RESPONSE_LENGTH = 1950;
 
-  let last15Messages = "";
+async function safeEditReply(messageOrInteraction, options) {
+  try {
+    if (messageOrInteraction.isChatInputCommand?.()) {
+      return await messageOrInteraction.editReply(options);
+    } else if (messageOrInteraction.edit) {
+      return await messageOrInteraction.edit(options);
+    }
+    return null;
+  } catch {}
+}
+
+async function processChat(
+  source,
+  content,
+  selectedVibe = null,
+  attachment = null
+) {
+  const isInteraction = source.isChatInputCommand?.();
+  const channel = source.channel;
+
+  let lastMessagesHistory = "";
 
   try {
-    if (messageOrInteraction.channel) {
-      const messages = await messageOrInteraction.channel.messages.fetch({ limit: 15 });
-      last15Messages = Array.from(messages.values())
+    if (channel && channel.messages) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const messages = await channel.messages.fetch({
+        limit: MESSAGE_HISTORY_LIMIT,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      lastMessagesHistory = Array.from(messages.values())
         .reverse()
         .map((msg) => `${msg.author.tag}: ${msg.content}`)
         .join("\n");
     }
-  } catch (error) {
-    last15Messages = "Unable to fetch message history";
+  } catch {}
+
+  if (!lastMessagesHistory) {
+    lastMessagesHistory =
+      "Message history not available for this channel type.";
   }
 
-  const serverName = messageOrInteraction.guild ? messageOrInteraction.guild.name : "DM";
-  const channelName = messageOrInteraction.channel?.name || "DM";
-  const userName = isInteraction ? messageOrInteraction.user.tag : messageOrInteraction.author.tag;
+  const serverName = source.guild ? source.guild.name : "DM";
+  const channelName =
+    channel?.name || (channel?.isDMBased() ? "DM" : "Unknown Channel");
+  const userName = isInteraction ? source.user.tag : source.author.tag;
 
-  const reply = isInteraction
-    ? await messageOrInteraction.editReply({
-      content: "<a:TypingEmoji:1335674049736736889> Typing...",
-    })
-    : await messageOrInteraction.reply({
-      content: "<a:TypingEmoji:1335674049736736889> Typing...",
-      fetchReply: true
-    });
+  let currentMessageReference = source;
 
-  const messages = [
-    {
-      role: "user", content: [
-        { type: 'text', text: content },
-      ]
-    }
+  const aiMessages = [
+    { role: "user", content: [{ type: "text", text: content }] },
   ];
 
-  if (messageOrInteraction.attachments?.size > 0) {
-    for (const [_, attachment] of messageOrInteraction.attachments) {
-      try {
-        messages[0].content.push({
-          type: "image",
-          image: attachment.url
-        });
-      } catch (error) {
-        console.error("Error processing image:", error);
-      }
+  if (attachment?.url) {
+    if (attachment.contentType?.startsWith("image/")) {
+      aiMessages[0].content.push({ type: "image", image: attachment.url });
     }
   }
 
-  let messageToEdit = await (isInteraction ? messageOrInteraction.fetchReply() : reply);
-
   try {
+    const vibeConfig = vibes[selectedVibe || "normal"] || vibes["normal"];
+
     const { textStream } = await streamText({
-      system: `${vibes[selectedVibe || "normal"].prompt}\n\nIMPORTANT: **YOU NOW HAVE THE ABILITY TO GENERATE IMAGES.**\nTo use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model. Keep it short and concise, lowercase. Don't generate images unless asked for.\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nLast messages:\n${last15Messages}`,
-      model: vibes[selectedVibe || "normal"].model,
-      messages,
-      maxSteps: 15,
+      system: `${vibeConfig.prompt}\n\nIMPORTANT: **YOU NOW HAVE THE ABILITY TO GENERATE/DRAW IMAGES.**\nTo use this function, append a newline at the end of your response followed by "image:" followed by the prompt to give to the AI model.\nKeep it short and concise, lowercase. Don't generate images unless asked for. **USE THIS TOOL INSTEAD OF DRAWING AN ASCII IMAGE. NEVER GENERATE ASCII IMAGES, ALWAYS USE THIS DRAWING FUNCTION**\n\nContext:\nServer: ${serverName}\nChannel: ${channelName}\nUser: ${userName}\nRecent messages:\n${lastMessagesHistory}`,
+      model: vibeConfig.model,
+      messages: aiMessages,
+      maxToolRoundtrips: 8,
       tools: {
         search: tool({
-          description: 'Search something on the web',
+          description:
+            "Search the web for recent information or specific topics.",
           parameters: z.object({
-            query: z.string().describe('The query to search for'),
+            query: z.string().describe("The query to search for"),
           }),
-          execute: async ({ query }) => ({
-            query,
-            results: await ddg.search(query, {
-              safeSearch: ddg.SafeSearchType.STRICT
-            })
-          }),
+          execute: async ({ query }) => {
+            try {
+              const searchPromise = ddg.search(query, {
+                safeSearch: ddg.SafeSearchType.STRICT,
+              });
+              const result = await Promise.race([
+                searchPromise,
+                new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error("Search timed out")), 8000)
+                ),
+              ]);
+              return { query, results: result?.results || [] };
+            } catch (searchError) {
+              return { query, results: [], error: searchError.message };
+            }
+          },
         }),
-      }
+      },
     });
 
-    let lastUpdateTime = Date.now();
-    let raw = "";
+    let accumulatedText = "";
+    let lastUpdateTime = 0;
+    let editPromise = null;
 
-    for await (let newText of textStream) {
-      raw += newText;
+    for await (const delta of textStream) {
+      accumulatedText += delta;
 
-      if (raw.length > 1900) {
-        raw = raw.slice(0, 1900);
-      }
+      const now = Date.now();
+      if (
+        now - lastUpdateTime >= EDIT_INTERVAL_MS &&
+        accumulatedText.trim() &&
+        !editPromise
+      ) {
+        let textToSend =
+          accumulatedText.length > MAX_RESPONSE_LENGTH
+            ? accumulatedText.slice(0, MAX_RESPONSE_LENGTH)
+            : accumulatedText;
 
-      const currentTime = Date.now();
-      if (currentTime - lastUpdateTime >= 100) {
-        try {
-          (isInteraction
-            ? messageOrInteraction.editReply({
-              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Typing...",
-              allowedMentions: { parse: [] },
-            })
-            : messageToEdit.edit({
-              content: raw.trim() + "\n-# <a:TypingEmoji:1335674049736736889> Typing...",
-              allowedMentions: { parse: [] },
-            })).then((e) => {
-              messageToEdit = e;
-            })
-          lastUpdateTime = currentTime;
-        } catch { }
+        const contentToSend =
+          textToSend.trim() +
+          "\n-# <a:TypingEmoji:1335674049736736889> Typing...";
+        lastUpdateTime = now;
+
+        editPromise = safeEditReply(currentMessageReference, {
+          content: contentToSend,
+          allowedMentions: { parse: [] },
+        })
+          .then((msg) => {
+            if (msg && !isInteraction) {
+              currentMessageReference = msg;
+            }
+            return msg;
+          })
+          .finally(() => {
+            editPromise = null;
+          });
       }
     }
 
-    const imagePrompt = raw.split("\n").find(line => {
-      return line.startsWith("image:");
-    })?.replace("image:", "")?.trim();
+    await editPromise;
 
-    let body;
-    try {
-      body = {
-        content: raw.split("\n").filter((line) => {
-          return !line.startsWith("image:")
-        }).join("\n").trim(),
-        files: imagePrompt ? [(await genImage(imagePrompt))] : [],
-        allowedMentions: { parse: [] },
-      };
-    } catch (error) {
-      const errorMessage = "❌ **Something went wrong while generating an image. Please try again later**\n-# Error: " + error.message;
+    const finalLines = accumulatedText.split("\n");
+    const imagePromptLine = finalLines.find((line) =>
+      line.toLowerCase().startsWith("image:")
+    );
+    const imagePrompt = imagePromptLine?.substring("image:".length).trim();
 
-      (isInteraction
-        ? messageOrInteraction.editReply({ content: errorMessage, allowedMentions: { parse: [] } })
-        : messageToEdit.edit({ content: errorMessage, allowedMentions: { parse: [] } }));
-      return;
+    const finalBodyText = finalLines
+      .filter((line) => !line.toLowerCase().startsWith("image:"))
+      .join("\n")
+      .trim()
+      .slice(0, MAX_RESPONSE_LENGTH);
+
+    let finalFiles = [];
+
+    if (imagePrompt) {
+      const imageResultBuffer = await genImage(imagePrompt);
+
+      finalFiles.push({
+        attachment: imageResultBuffer,
+        name: "generated_image.png",
+      });
     }
 
-    (isInteraction
-      ? messageOrInteraction.editReply(body)
-      : messageToEdit.edit(body));
+    let finalContent = finalBodyText;
 
+    await safeEditReply(currentMessageReference, {
+      content: finalContent.slice(0, 2000),
+      files: finalFiles,
+      allowedMentions: { parse: [] },
+    });
   } catch (error) {
-    console.error("Error in message processing:", error);
-    const errorMessage = "❌ **Something went wrong. Please try again later**\n```" + error.message + "\n```";
-
-    (isInteraction
-      ? messageOrInteraction.editReply({ content: errorMessage, allowedMentions: { parse: [] } })
-      : messageToEdit.edit({ content: errorMessage, allowedMentions: { parse: [] } }));
+    const errorMessage = `❌ **An error occurred .**\n\`\`\`${error.message}\`\`\``;
+    await safeEditReply(currentMessageReference, {
+      content: errorMessage.slice(0, 2000),
+      components: [],
+      files: [],
+    });
   }
 }
 
 client.once("ready", async () => {
-  console.log(`Logged in as ${client.user.tag}!\nInvite link: ${inviteLink}`);
+  console.log(`Logged in as ${client.user.tag}!`);
+  console.log(`Invite link: ${inviteLink}`);
 
   client.user.setPresence({
-    status: 'online',
-    activities: [{
-      name: 'my notifications',
-      type: ActivityType.Watching,
-      url: 'https://github.com/tiagorangel1/happyrobot'
-    }]
+    status: "online",
+    activities: [
+      {
+        name: "/chat & DMs",
+        type: ActivityType.Watching,
+      },
+    ],
   });
 
   const chatCommand = new SlashCommandBuilder()
-    .setName('chat')
-    .setDescription('Chat with Happy Robot')
-    .addStringOption(option =>
+    .setName("chat")
+    .setDescription("Chat with Happy Robot")
+    .addStringOption((option) =>
       option
-        .setName('message')
-        .setDescription('The message to send to the bot')
-        .setRequired(true))
-    .addStringOption(option =>
+        .setName("message")
+        .setDescription("The message to send to the bot")
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
       option
-        .setName('vibe')
-        .setDescription('Set a specific vibe for the response')
+        .setName("vibe")
+        .setDescription("Set a specific vibe for the response")
         .addChoices(
-          ...Object.keys(vibes).map(vibe => ({ name: vibe, value: vibe }))
-        ))
-    .addAttachmentOption(option =>
+          ...Object.keys(vibes)
+            .filter((vibe) => vibe && vibes[vibe])
+            .map((vibe) => ({
+              name: vibe.charAt(0).toUpperCase() + vibe.slice(1),
+              value: vibe,
+            }))
+        )
+    )
+    .addAttachmentOption((option) =>
       option
-        .setName('image')
-        .setDescription('An image to analyze'))
+        .setName("image")
+        .setDescription(
+          "(Optional) An image for the bot to analyze with your message"
+        )
+    )
+    .setIntegrationTypes(0, 1)
     .setContexts(0, 1, 2);
 
   await client.application.commands.set([chatCommand]);
 });
 
-client.on('interactionCreate', async interaction => {
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'chat') {
+  if (interaction.commandName === "chat") {
+    await interaction.deferReply({ ephemeral: false });
+
     try {
-      await interaction.deferReply();
+      const messageContent = interaction.options.getString("message", true);
+      const vibe = interaction.options.getString("vibe");
+      const attachment = interaction.options.getAttachment("image");
 
-      const message = interaction.options.getString('message');
-      const vibe = interaction.options.getString('vibe');
-      const image = interaction.options.getAttachment('image');
-
-      if (image) {
-        interaction.attachments = new Map([[image.id, image]]);
-      }
-
-      await processChat(interaction, message, vibe);
+      await processChat(interaction, messageContent, vibe, attachment);
     } catch (error) {
-      console.error('Interaction error:', error);
-      try {
-        if (interaction.deferred) {
-          await interaction.editReply({ content: '❌ An error occurred. Please try again.' });
-        } else {
-          await interaction.reply({ content: '❌ An error occurred. Please try again.', ephemeral: true });
-        }
-      } catch (e) {
-        console.error('Error handling error:', e);
-      }
+      console.error("Error processing chat interaction:", error);
+      await safeEditReply(interaction, {
+        content: "❌ An error occurred. Please try again later.",
+        components: [],
+        files: [],
+      });
     }
   }
 });
 
 client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
+  if (message.author.bot || message.system) return;
 
-  if (message.channel.type === 1 && message.channel.isDMBased()) {
-    let selectedVibe = null;
-    let content = message.content;
+  let content = message.content;
+  let shouldProcess = false;
+  let selectedVibe = "normal";
+  let attachment = message.attachments.first();
 
-    if (message.content.includes("--vibe")) {
-      const newVibe = message.content.split(" --vibe ")[1]?.toLowerCase().trim();
-
-      if (newVibe && vibes[newVibe]) {
-        selectedVibe = newVibe;
-        content = message.content.split(" --vibe ")[0].trim();
-      } else if (newVibe) {
-        await message.reply(`❌ **Vibe "${newVibe}" not found**\n-# Available vibes: ${Object.keys(vibes).join(", ")}`, {
-          allowedMentions: { parse: [] },
-        });
+  if (message.channel.isDMBased()) {
+    shouldProcess = true;
+    const vibeMatch = content.match(/--vibe\s+(\w+)/i);
+    if (vibeMatch && vibeMatch[1]) {
+      const requestedVibe = vibeMatch[1].toLowerCase().trim();
+      if (vibes[requestedVibe]) {
+        selectedVibe = requestedVibe;
+        content = content.replace(vibeMatch[0], "").trim();
+      } else {
+        await message
+          .reply({
+            content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
+              vibes
+            ).join(", ")}`,
+            allowedMentions: { parse: [] },
+          })
+          .catch((e) =>
+            console.error("Failed to send vibe not found reply:", e)
+          );
         return;
       }
     }
+  } else if (message.mentions.has(client.user.id)) {
+    shouldProcess = true;
+    content = content.replace(/<@!?\d+>/g, "").trim();
 
-    await processChat(message, content, selectedVibe);
-    return;
-  }
-
-  if (!message.content || !message.mentions.has(client.user)) {
-    return;
-  }
-
-  const content = message.content.replaceAll(`<@${client.user.id}>`, "");
-  let selectedVibe = "normal";
-
-  if (message.content.includes("--vibe")) {
-    const newVibe = message.content.split(" --vibe ")[1]?.toLowerCase().trim();
-
-    if (newVibe && vibes[newVibe]) {
-      selectedVibe = newVibe;
-    } else if (newVibe) {
-      await message.reply(`❌ **Vibe "${newVibe}" not found**\n-# Available vibes: ${Object.keys(vibes).join(", ")}`, {
-        allowedMentions: { parse: [] },
-      });
-      return;
+    const vibeMatch = content.match(/--vibe\s+(\w+)/i);
+    if (vibeMatch && vibeMatch[1]) {
+      const requestedVibe = vibeMatch[1].toLowerCase().trim();
+      if (vibes[requestedVibe]) {
+        selectedVibe = requestedVibe;
+        content = content.replace(vibeMatch[0], "").trim();
+      } else {
+        await message
+          .reply({
+            content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
+              vibes
+            ).join(", ")}`,
+            allowedMentions: { parse: [] },
+          })
+          .catch((e) =>
+            console.error("Failed to send vibe not found reply:", e)
+          );
+        return;
+      }
     }
   }
 
-  await processChat(message, content, selectedVibe);
+  if (shouldProcess && (content || attachment)) {
+    const initialReply = await message.reply({
+      content: "<a:TypingEmoji:1335674049736736889> Thinking...",
+      allowedMentions: { parse: [] },
+      fetchReply: true,
+    });
+
+    await processChat(initialReply, content, selectedVibe, attachment);
+  }
 });
 
-DefaultWebSocketManagerOptions.identifyProperties.browser = 'Discord iOS';
+process.on("exit", () => {
+  client.destroy();
+  process.exit(0);
+});
+
+DefaultWebSocketManagerOptions.identifyProperties.browser = "Discord iOS";
 
 client.login(process.env.BOT_TOKEN);
