@@ -256,7 +256,19 @@ client.once("ready", async () => {
     .setIntegrationTypes(0, 1)
     .setContexts(0, 1, 2);
 
-  await client.application.commands.set([chatCommand]);
+  const drawCommand = new SlashCommandBuilder()
+    .setName("draw")
+    .setDescription("Draws an image based on your prompt using flux")
+    .addStringOption((option) =>
+      option
+        .setName("prompt")
+        .setDescription("The prompt to draw an image")
+        .setRequired(true)
+    )
+    .setIntegrationTypes(0, 1)
+    .setContexts(0, 1, 2);
+
+  await client.application.commands.set([chatCommand, drawCommand]);
 });
 
 client.on("interactionCreate", async (interaction) => {
@@ -279,6 +291,23 @@ client.on("interactionCreate", async (interaction) => {
         files: [],
       });
     }
+  }
+
+  if (interaction.commandName === "draw") {
+    const prompt = interaction.options.getString("prompt", true);
+    await interaction.deferReply();
+
+    const imageAttachment = await genImage(prompt);
+
+    await interaction.editReply({
+      content: "-# ✨ Generated image using flux",
+      files: [
+        {
+          attachment: imageAttachment,
+          name: "generated_image.png",
+        },
+      ],
+    });
   }
 });
 
@@ -341,7 +370,6 @@ client.on("messageCreate", async (message) => {
   if (shouldProcess && (content || attachment)) {
     const initialReply = await message.reply({
       content: "<a:TypingEmoji:1335674049736736889> Thinking...",
-      allowedMentions: { parse: [] },
       fetchReply: true,
     });
 
