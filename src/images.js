@@ -1,6 +1,6 @@
 export default async function genImage(prompt) {
-  const width = 512;
-  const height = 768;
+  const width = 1024;
+  const height = 1024;
   const encodedPrompt = encodeURIComponent(prompt.trim());
 
   const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=flux&seed=${new Date().getTime()}`;
