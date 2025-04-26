@@ -324,6 +324,7 @@ client.on("messageCreate", async (message) => {
     const vibeMatch = content.match(/--vibe\s+(\w+)/i);
     if (vibeMatch && vibeMatch[1]) {
       const requestedVibe = vibeMatch[1].toLowerCase().trim();
+
       if (vibes[requestedVibe]) {
         selectedVibe = requestedVibe;
         content = content.replace(vibeMatch[0], "").trim();
@@ -334,10 +335,7 @@ client.on("messageCreate", async (message) => {
               vibes
             ).join(", ")}`,
             allowedMentions: { parse: [] },
-          })
-          .catch((e) =>
-            console.error("Failed to send vibe not found reply:", e)
-          );
+          });
         return;
       }
     }
@@ -358,10 +356,7 @@ client.on("messageCreate", async (message) => {
               vibes
             ).join(", ")}`,
             allowedMentions: { parse: [] },
-          })
-          .catch((e) =>
-            console.error("Failed to send vibe not found reply:", e)
-          );
+          });
         return;
       }
     }
