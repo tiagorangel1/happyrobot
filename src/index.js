@@ -52,6 +52,17 @@ async function processChat(
 ) {
   const isInteraction = source.isChatInputCommand?.();
   const channel = source.channel;
+  const authorId = isInteraction ? source.user.id : source.author.id;
+
+  const BANS = process.env.BANS?.split(",");
+
+  if (BANS && BANS.includes(authorId)) {
+    safeEditReply(source, {
+      content: "You have been banned from using this bot.",
+      allowedMentions: { parse: [] },
+    });
+    return "You have been banned from using this bot.";
+  }
 
   let lastMessagesHistory = "";
 
@@ -329,13 +340,12 @@ client.on("messageCreate", async (message) => {
         selectedVibe = requestedVibe;
         content = content.replace(vibeMatch[0], "").trim();
       } else {
-        await message
-          .reply({
-            content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
-              vibes
-            ).join(", ")}`,
-            allowedMentions: { parse: [] },
-          });
+        await message.reply({
+          content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
+            vibes
+          ).join(", ")}`,
+          allowedMentions: { parse: [] },
+        });
         return;
       }
     }
@@ -350,13 +360,12 @@ client.on("messageCreate", async (message) => {
         selectedVibe = requestedVibe;
         content = content.replace(vibeMatch[0], "").trim();
       } else {
-        await message
-          .reply({
-            content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
-              vibes
-            ).join(", ")}`,
-            allowedMentions: { parse: [] },
-          });
+        await message.reply({
+          content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
+            vibes
+          ).join(", ")}`,
+          allowedMentions: { parse: [] },
+        });
         return;
       }
     }
