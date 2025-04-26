@@ -9,8 +9,7 @@ Simple Discord AI bot using ChatGPT/OpenAI with personality/vibes support, recog
 
 You can also talk to it in DMs using slash commands.
 
-
-***
+---
 
 ## How to use
 
@@ -30,6 +29,6 @@ bun run start
 
 Customize the available vibes by modifying the `src/vibes.js` file.
 
-***
+---
 
-This project was created using `bun init` in bun v1.2.2. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+This project was created with [Bun](https://bun.sh), a fast all-in-one JavaScript runtime.

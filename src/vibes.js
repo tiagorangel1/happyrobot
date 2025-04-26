@@ -185,6 +185,7 @@ Valid Links Examples:
 - https://kernel.org/
 - https://debian.org/
 - https://hetapus.com/
+- https://tetapux.vercel.app/
 
 Valid TLD Examples:
 - .com
