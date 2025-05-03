@@ -323,61 +323,65 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.on("messageCreate", async (message) => {
-  if (message.author.bot || message.system) return;
+  try {
+    if (message.author.bot || message.system) return;
 
-  let content = message.content;
-  let shouldProcess = false;
-  let selectedVibe = "normal";
-  let attachment = message.attachments.first();
+    let content = message.content;
+    let shouldProcess = false;
+    let selectedVibe = "normal";
+    let attachment = message.attachments.first();
 
-  if (message.channel.isDMBased()) {
-    shouldProcess = true;
-    const vibeMatch = content.match(/--vibe\s+(\w+)/i);
-    if (vibeMatch && vibeMatch[1]) {
-      const requestedVibe = vibeMatch[1].toLowerCase().trim();
+    if (message.channel.isDMBased()) {
+      shouldProcess = true;
+      const vibeMatch = content.match(/--vibe\s+(\w+)/i);
+      if (vibeMatch && vibeMatch[1]) {
+        const requestedVibe = vibeMatch[1].toLowerCase().trim();
 
-      if (vibes[requestedVibe]) {
-        selectedVibe = requestedVibe;
-        content = content.replace(vibeMatch[0], "").trim();
-      } else {
-        await message.reply({
-          content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
-            vibes
-          ).join(", ")}`,
-          allowedMentions: { parse: [] },
-        });
-        return;
+        if (vibes[requestedVibe]) {
+          selectedVibe = requestedVibe;
+          content = content.replace(vibeMatch[0], "").trim();
+        } else {
+          await message.reply({
+            content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
+              vibes
+            ).join(", ")}`,
+            allowedMentions: { parse: [] },
+          });
+          return;
+        }
+      }
+    } else if (message.mentions.has(client.user.id)) {
+      shouldProcess = true;
+      content = content.replace(/<@!?\d+>/g, "").trim();
+
+      const vibeMatch = content.match(/--vibe\s+(\w+)/i);
+      if (vibeMatch && vibeMatch[1]) {
+        const requestedVibe = vibeMatch[1].toLowerCase().trim();
+        if (vibes[requestedVibe]) {
+          selectedVibe = requestedVibe;
+          content = content.replace(vibeMatch[0], "").trim();
+        } else {
+          await message.reply({
+            content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
+              vibes
+            ).join(", ")}`,
+            allowedMentions: { parse: [] },
+          });
+          return;
+        }
       }
     }
-  } else if (message.mentions.has(client.user.id)) {
-    shouldProcess = true;
-    content = content.replace(/<@!?\d+>/g, "").trim();
 
-    const vibeMatch = content.match(/--vibe\s+(\w+)/i);
-    if (vibeMatch && vibeMatch[1]) {
-      const requestedVibe = vibeMatch[1].toLowerCase().trim();
-      if (vibes[requestedVibe]) {
-        selectedVibe = requestedVibe;
-        content = content.replace(vibeMatch[0], "").trim();
-      } else {
-        await message.reply({
-          content: `⚠️ **Vibe "${requestedVibe}" not found.**\nAvailable vibes: ${Object.keys(
-            vibes
-          ).join(", ")}`,
-          allowedMentions: { parse: [] },
-        });
-        return;
-      }
+    if (shouldProcess && (content || attachment)) {
+      const initialReply = await message.reply({
+        content: "<a:TypingEmoji:1335674049736736889> Thinking...",
+        fetchReply: true,
+      });
+
+      await processChat(initialReply, content, selectedVibe, attachment);
     }
-  }
-
-  if (shouldProcess && (content || attachment)) {
-    const initialReply = await message.reply({
-      content: "<a:TypingEmoji:1335674049736736889> Thinking...",
-      fetchReply: true,
-    });
-
-    await processChat(initialReply, content, selectedVibe, attachment);
+  } catch (e) {
+    console.error(e);
   }
 });
 
