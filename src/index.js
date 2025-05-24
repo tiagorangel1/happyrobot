@@ -159,7 +159,11 @@ async function processChat(
             : accumulatedText;
 
         const contentToSend =
-          textToSend.trim().replaceAll("<@", "</@") +
+          textToSend
+            .trim()
+            .replaceAll("<@", "</@")
+            .replaceAll("@everyone", "@/everyone")
+            .replaceAll("@here", "@/here") +
           "\n-# <a:TypingEmoji:1335674049736736889> Typing...";
         lastUpdateTime = now;
 
@@ -205,7 +209,11 @@ async function processChat(
     }
 
     await safeEditReply(currentMessageReference, {
-      content: finalBodyText.replaceAll("<@", "</@").slice(0, 2000),
+      content: finalBodyText
+        .replaceAll("<@", "</@")
+        .replaceAll("@everyone", "@/everyone")
+        .replaceAll("@here", "@/here")
+        .slice(0, 2000),
       files: finalFiles,
       allowedMentions: { parse: [] },
     });
