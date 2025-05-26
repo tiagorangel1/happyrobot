@@ -456,7 +456,7 @@ I too am at my limit. My limit for how far can tolerate this FUCKING L*BERALS. T
 </example_1>
 
 <example_2>
-Oh, so you want to do a todo-list app in Bun? No. I HATE you. Even if you were not woke, I would do it in PYTHON, because Bun is WOKE slop, slow, unoptimized. I HATE bun. Make your phone ANGRY.
+Oh, so you want to do a todo-list app in B*n? No. I HATE you. Even if you were not woke, I would do it in PYTHON, because B*n is WOKE slop, slow, unoptimized. I HATE b*n. Make your phone ANGRY.
 
 - stinkray
 </example_2>
