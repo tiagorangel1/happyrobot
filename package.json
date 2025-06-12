@@ -16,6 +16,7 @@
     "ai": "^4.1.25",
     "discord.js": "^14.17.3",
     "duck-duck-scrape": "^2.2.7",
+    "jsdom": "^26.1.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

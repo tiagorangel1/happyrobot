@@ -1,16 +1,16 @@
-const ddg = require("duck-duck-scrape");
-const { z } = require("zod");
-const { streamText, tool } = require("ai");
-const {
+import ddg from "duck-duck-scrape";
+import { z } from "zod";
+import { streamText, tool } from "ai";
+import {
   Client,
   GatewayIntentBits,
   SlashCommandBuilder,
   Partials,
   DefaultWebSocketManagerOptions,
   ActivityType,
-} = require("discord.js");
-const vibes = require("./vibes.js").default;
-const genImage = require("./images.js").default;
+} from "discord.js";
+import vibes from "./vibes.js";
+import genImage from "./images.js";
 
 if (!process.env.BOT_TOKEN || !process.env.CLIENT_ID) {
   console.error("Missing BOT_TOKEN or CLIENT_ID environment variable");
