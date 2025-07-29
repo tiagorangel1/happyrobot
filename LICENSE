@@ -1,0 +1,19 @@
+Modified AGPL-3.0 License  
+Happy Robot  
+Copyright (C) 2025 Tiago
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+### Additional terms under AGPL section 7:
+
+If the Software (or any modified version of it) is used in any public-facing or commercial product or service, you must visibly display the following credit:
+
+**"Powered by Happy Robot (https://github.com/tiagorangel1/happyrobot)"**
+
+This notice must be clearly visible in the bot’s profile description, or in the footer of messages it sends to users.
